@@ -1,19 +1,21 @@
 package com.rbdip.bookstore.order;
 
+import com.rbdip.bookstore.customer.Customer;
+import com.rbdip.bookstore.product.Product;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * Намеренно денормализованная сущность: хранит "сырые" контактные данные
- * клиента прямо в заказе вместо ссылки на отдельную таблицу customers.
- * Это цель для нормализации схемы в ЛР2, а поле customerFullName - цель
- * expand-contract миграции в ЛР3 (разбить на firstName/lastName).
- */
 @Entity
 @Table(name = "orders")
 public class Order {
@@ -22,14 +24,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "customer_full_name", nullable = false)
-    private String customerFullName;
-
-    @Column(name = "customer_address")
-    private String customerAddress;
-
-    @Column(name = "customer_phone")
-    private String customerPhone;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
 
     @Column(nullable = false)
     private String status;
@@ -37,15 +34,20 @@ public class Order {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> items = new ArrayList<>();
+
     protected Order() {
         // for JPA
     }
 
-    public Order(String customerFullName, String customerAddress, String customerPhone, String status) {
-        this.customerFullName = customerFullName;
-        this.customerAddress = customerAddress;
-        this.customerPhone = customerPhone;
+    public Order(Customer customer, String status) {
+        this.customer = customer;
         this.status = status;
+    }
+
+    public void addItem(Product product, int quantity) {
+        items.add(new OrderItem(this, product, quantity));
     }
 
     public Long getId() {
@@ -53,15 +55,19 @@ public class Order {
     }
 
     public String getCustomerFullName() {
-        return customerFullName;
+        return customer.getFullName();
     }
 
     public String getCustomerAddress() {
-        return customerAddress;
+        return customer.getAddress();
     }
 
     public String getCustomerPhone() {
-        return customerPhone;
+        return customer.getPhone();
+    }
+
+    public Customer getCustomer() {
+        return customer;
     }
 
     public String getStatus() {
@@ -70,5 +76,9 @@ public class Order {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public List<OrderItem> getItems() {
+        return items;
     }
 }
