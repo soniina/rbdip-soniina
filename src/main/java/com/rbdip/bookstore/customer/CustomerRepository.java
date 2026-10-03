@@ -8,8 +8,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("""
             SELECT c FROM Customer c
-            WHERE CASE WHEN c.firstName IS NULL THEN c.fullName
-                       WHEN c.lastName IS NULL THEN c.firstName
+            WHERE CASE WHEN c.lastName IS NULL THEN c.firstName
                        ELSE CONCAT(c.firstName, ' ', c.lastName) END = :fullName
               AND (c.address = :address OR (c.address IS NULL AND :address IS NULL))
               AND (c.phone = :phone OR (c.phone IS NULL AND :phone IS NULL))

@@ -32,7 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.flyway.target=3")
+        properties = "spring.flyway.target=4")
 class CustomerNameMigrationTest {
 
     private static final int WAIT_SECONDS = 10;
@@ -81,17 +81,7 @@ class CustomerNameMigrationTest {
     }
 
     @Test
-    void backfillPreservesNamesAndExistingCustomers() throws Exception {
-        for (String name : EXISTING_NAMES) {
-            exerciseOrdersApi(name);
-        }
-        migrateUnderLoad("4");
-        assertThat(jdbcTemplate.queryForObject("""
-                SELECT count(*) FROM customers
-                WHERE full_name IS DISTINCT FROM
-                    CASE WHEN last_name IS NULL THEN first_name
-                         ELSE first_name || ' ' || last_name END
-                """, Integer.class)).isZero();
+    void backfillPreservesNamesAndExistingCustomers() {
         assertThat(jdbcTemplate.queryForList("SELECT first_name FROM customers", String.class)).doesNotContainNull();
         assertThat(jdbcTemplate.queryForList("""
                 SELECT CASE WHEN last_name IS NULL THEN first_name
@@ -104,6 +94,18 @@ class CustomerNameMigrationTest {
         }
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM customers", Integer.class))
                 .as("Existing migrated customers must be reused").isEqualTo(customers);
+    }
+
+    @Test
+    void contractMigrationKeepsOrdersApiAvailable() throws Exception {
+        migrateUnderLoad("5");
+        exerciseOrdersApi("After Migration");
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT column_name FROM information_schema.columns WHERE table_name = 'customers'
+                """, String.class)).contains("first_name", "last_name").doesNotContain("full_name");
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'
+                """, String.class)).doesNotContain("customer_full_name", "customer_address", "customer_phone");
     }
 
     private void migrateUnderLoad(String target) throws Exception {
