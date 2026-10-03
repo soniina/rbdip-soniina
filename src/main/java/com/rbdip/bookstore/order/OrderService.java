@@ -1,12 +1,13 @@
 package com.rbdip.bookstore.order;
 
+import com.rbdip.bookstore.review.PurchaseHistory;
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class OrderService {
+public class OrderService implements PurchaseHistory {
 
     private static final String DEFAULT_CUSTOMER_TYPE = "regular";
 
@@ -15,18 +16,21 @@ public class OrderService {
     private final PricingCalculator pricingCalculator;
     private final OrderPersistenceService orderPersistenceService;
     private final OrderNotifier orderNotifier;
+    private final OrderRepository orderRepository;
 
     public OrderService(
             OrderValidator orderValidator,
             OrderItemResolver orderItemResolver,
             PricingCalculator pricingCalculator,
             OrderPersistenceService orderPersistenceService,
-            OrderNotifier orderNotifier) {
+            OrderNotifier orderNotifier,
+            OrderRepository orderRepository) {
         this.orderValidator = orderValidator;
         this.orderItemResolver = orderItemResolver;
         this.pricingCalculator = pricingCalculator;
         this.orderPersistenceService = orderPersistenceService;
         this.orderNotifier = orderNotifier;
+        this.orderRepository = orderRepository;
     }
 
     @Transactional
@@ -43,6 +47,12 @@ public class OrderService {
         orderNotifier.sendConfirmation(request.customerFullName(), order.getId(), total);
 
         return order;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasPurchasedProduct(String authorName, Long productId) {
+        return orderRepository.hasPurchasedProduct(authorName, productId);
     }
 
     private String customerType(CreateOrderRequest request) {

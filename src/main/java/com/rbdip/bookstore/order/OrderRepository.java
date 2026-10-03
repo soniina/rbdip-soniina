@@ -13,4 +13,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             LEFT JOIN FETCH i.product
             """)
     List<Order> findAllWithItems();
+
+    @Query("""
+            SELECT COUNT(i) > 0 FROM OrderItem i
+            JOIN i.order.customer c
+            WHERE i.product.id = :productId
+              AND CASE WHEN c.lastName IS NULL THEN c.firstName
+                       ELSE CONCAT(c.firstName, ' ', c.lastName) END = :authorName
+            """)
+    boolean hasPurchasedProduct(String authorName, Long productId);
 }
