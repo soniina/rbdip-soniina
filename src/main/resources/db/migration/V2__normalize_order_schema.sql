@@ -44,7 +44,7 @@ CREATE INDEX idx_order_items_product_id ON order_items (product_id);
 CREATE INDEX idx_order_items_order_id ON order_items (order_id);
 
 ALTER TABLE orders
-    DROP COLUMN customer_full_name,
+    ALTER COLUMN customer_full_name DROP NOT NULL,
     DROP COLUMN customer_address,
     DROP COLUMN customer_phone;
 
